@@ -24,9 +24,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
-//@Configuration
-//@EnableBatchProcessing
+@Configuration
+@EnableBatchProcessing
 public class PartitionConfig {
 
     @Autowired
@@ -43,22 +45,31 @@ public class PartitionConfig {
 
     @Bean
     public Step masterStep() throws Exception {
-        return stepBuilderFactory.get("masterStep").partitioner(slaveStep()).partitioner("partition", partitioner())
-                .gridSize(10).taskExecutor(new SimpleAsyncTaskExecutor()).build();
+        return stepBuilderFactory.get("masterStep")
+                .partitioner(slaveStep())
+                .partitioner("partition", partitioner())
+                .gridSize(10)
+                .taskExecutor(new SimpleAsyncTaskExecutor())
+                //.taskExecutor(taskExecutor())
+                .build();
     }
 
     @Bean
     public Partitioner partitioner() throws Exception {
         MultiResourcePartitioner partitioner = new MultiResourcePartitioner();
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-        partitioner.setResources(resolver.getResources("file:/home/java/meta_Clothing_Shoes_and_Jewelry/x*"));
+        partitioner.setResources(resolver.getResources("file:/Users/shentianqi/Desktop/研一下学期/软件体系结构/aw06-Price1999a/testdata/*.json"));
         return partitioner;
     }
 
     @Bean
     public Step slaveStep() throws Exception {
-        return stepBuilderFactory.get("slaveStep").<JsonNode, Product>chunk(1)
-                .reader(itemReader(null)).processor(itemProcessor()).writer(itemWriter()).build();
+        return stepBuilderFactory.get("slaveStep").<JsonNode, Product>chunk(10000)
+                .reader(itemReader(null))
+                .processor(itemProcessor())
+                .writer(itemWriter())
+                .taskExecutor(taskExecutor())
+                .build();
     }
 
     @Bean
@@ -75,6 +86,18 @@ public class PartitionConfig {
     @Bean
     public ItemWriter<Product> itemWriter() {
         return new ProductWriter();
+    }
+
+
+    @Bean
+    @StepScope
+    public TaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(6);
+        executor.setMaxPoolSize(6);
+        executor.setQueueCapacity(24);
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        return executor;
     }
 
 }
