@@ -58,13 +58,13 @@ public class PartitionConfig {
     public Partitioner partitioner() throws Exception {
         MultiResourcePartitioner partitioner = new MultiResourcePartitioner();
         PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
-        partitioner.setResources(resolver.getResources("file:/Users/shentianqi/Desktop/研一下学期/软件体系结构/aw06-Price1999a/testdata/*.json"));
+        partitioner.setResources(resolver.getResources("file:./testdata/*.json"));
         return partitioner;
     }
 
     @Bean
     public Step slaveStep() throws Exception {
-        return stepBuilderFactory.get("slaveStep").<JsonNode, Product>chunk(10000)
+        return stepBuilderFactory.get("slaveStep").<JsonNode, Product>chunk(1000)
                 .reader(itemReader(null))
                 .processor(itemProcessor())
                 .writer(itemWriter())
